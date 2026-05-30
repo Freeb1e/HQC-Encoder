@@ -1,6 +1,21 @@
 module TEST_PLATFORM (
     input logic clk,
     input logic rst_n
+`ifndef SIMULATION
+    ,
+    input  logic       enc_start,
+    input  logic       data_we,
+    input  logic [3:0] data_waddr,
+    input  logic [7:0] data_wdata,
+    input  logic [5:0] ram_query_addr,
+    input  logic [3:0] ram_query_byte_sel,
+    output logic [7:0] ram_query_rdata,
+    output logic       code_valid_o,
+    output logic       busy_o,
+    output logic       done_o,
+    output logic       ram_wen_o,
+    output logic [5:0] ram_waddr_o
+`endif
 );
 
     localparam int DATA_BYTES = 16;
@@ -21,8 +36,10 @@ module TEST_PLATFORM (
     logic         busy;
     logic         done;
 
+`ifdef SIMULATION
     logic [127:0] test_msg [NUM_TESTS];
     logic [127:0] expected_rm [NUM_RM_WORDS];
+`endif
 
     HQC1_Encoder u_encoder (
         .clk(clk),
@@ -47,6 +64,7 @@ module TEST_PLATFORM (
         .rdata(ram_rdata)
     );
 
+`ifdef SIMULATION
     typedef enum logic [2:0] {
         TB_RESET,
         TB_START,
@@ -204,5 +222,36 @@ module TEST_PLATFORM (
             endcase
         end
     end
+`else
+    logic enc_start_q;
+    logic [6:0] data_byte_bit_idx;
+    logic [6:0] ram_byte_bit_idx;
+
+    assign data_byte_bit_idx = {3'b0, (4'd15 - data_waddr)} << 3;
+    assign ram_byte_bit_idx = {3'b0, (4'd15 - ram_query_byte_sel)} << 3;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            start <= 1'b0;
+            data_in <= '0;
+            enc_start_q <= 1'b0;
+        end else begin
+            enc_start_q <= enc_start;
+            start <= enc_start & ~enc_start_q;
+
+            if (data_we) begin
+                data_in[data_byte_bit_idx +: 8] <= data_wdata;
+            end
+        end
+    end
+
+    assign ram_raddr = ram_query_addr;
+    assign ram_query_rdata = ram_rdata[ram_byte_bit_idx +: 8];
+    assign code_valid_o = code_valid;
+    assign busy_o = busy;
+    assign done_o = done;
+    assign ram_wen_o = ram_wen;
+    assign ram_waddr_o = ram_waddr;
+`endif
 
 endmodule
