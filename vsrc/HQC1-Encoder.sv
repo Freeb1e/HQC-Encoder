@@ -42,12 +42,13 @@ module HQC1_Encoder (
     logic [4:0]   data_byte_idx;
     logic [5:0]   parity_byte_idx;
     logic [5:0]   rm_write_addr;
+    logic [5:0]   ram_write_addr;
     logic         done_reg;
     int unsigned  data_bit_idx;
     int unsigned  parity_bit_idx;
 
     assign rs_start = (current_state == IDLE) & start;
-    assign data_bit_idx = (DATA_BYTES - 1 - int'(data_byte_idx)) * 8;
+    assign data_bit_idx = int'(data_byte_idx) * 8;
     assign parity_bit_idx = (PARITY_BYTES - 1 - int'(parity_byte_idx)) * 8;
 
     HQC1_RS_Encoder u_rs_encoder (
@@ -150,10 +151,18 @@ module HQC1_Encoder (
         end
     end
 
+    always_comb begin
+        if (rm_write_addr < DATA_BYTES[5:0]) begin
+            ram_write_addr = PARITY_BYTES[5:0] + rm_write_addr;
+        end else begin
+            ram_write_addr = rm_write_addr - DATA_BYTES[5:0];
+        end
+    end
+
     assign code_out = rm_code_out;
     assign code_valid = rm_code_valid;
     assign ram_wen = rm_code_valid;
-    assign ram_waddr = rm_write_addr;
+    assign ram_waddr = ram_write_addr;
     assign ram_wdata = rm_code_out;
     assign busy = (current_state != IDLE) | rs_busy | rm_busy | rm_code_valid;
     assign done = done_reg;

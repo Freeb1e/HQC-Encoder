@@ -40,3 +40,4 @@ rs_code.memh
 *~
 .DS_Store
 Thumbs.db
+*.memh

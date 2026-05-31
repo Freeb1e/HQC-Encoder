@@ -105,7 +105,7 @@ module HQC1_RS_Encoder (
         end
 
         for (int i = 0; i < PARITY_BYTES; i++) begin
-            code_out[(PARITY_BYTES-1-i)*8 +: 8] = parity_reg[PARITY_BYTES-1-i];
+            code_out[(PARITY_BYTES-1-i)*8 +: 8] = parity_reg[i];
         end
     end
 
